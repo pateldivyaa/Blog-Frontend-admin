@@ -1,15 +1,15 @@
 import axios from 'axios';
 
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
+console.log("API BASE URL:", API_BASE_URL); // Add this for debug
 
-
-// Create axios instance with default config
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
 });
+
 
 // Add request interceptor to include auth token
 apiClient.interceptors.request.use(
