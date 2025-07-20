@@ -1,5 +1,6 @@
 import axios from 'axios';
 
+
 const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
 console.log("API BASE URL:", API_BASE_URL); // Add this for debug
 
@@ -50,19 +51,19 @@ export const authorAPI = {
 };
 
 // Admin API endpoints
-adminAPI.login({ email, password })
-  .then((res) => {
-    localStorage.setItem("token", res.data.token);
-    navigate("/dashboard");
-  })
-  .catch((err) => {
-    const message = err.response?.data?.message || "Login failed";
-    console.log("Login error:", message);
-    setError(message);  // useState for showing in UI
-  });
-// export const adminAPI = {
-//   login: (credentials) => apiClient.post('/admin/login', credentials),
-//   logout: () => apiClient.post('/admin/logout'),
-// };
+// adminAPI.login({ email, password })
+//   .then((res) => {
+//     localStorage.setItem("token", res.data.token);
+//     navigate("/dashboard");
+//   })
+//   .catch((err) => {
+//     const message = err.response?.data?.message || "Login failed";
+//     console.log("Login error:", message);
+//     setError(message);  // useState for showing in UI
+//   });
+export const adminAPI = {
+  login: (credentials) => apiClient.post('/admin/login', credentials),
+  logout: () => apiClient.post('/admin/logout'),
+};
 
 export default apiClient;
