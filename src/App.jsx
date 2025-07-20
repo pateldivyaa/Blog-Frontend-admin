@@ -10,6 +10,7 @@ import AddBlog from './pages/AddBlog.jsx';
 import BlogList from './pages/BlogList.jsx';
 
 function App() {
+    console.log("Git test change made ✅"); 
   return (
     <AuthProvider>
       <Router>
@@ -62,6 +63,7 @@ function App() {
         </div>
       </Router>
     </AuthProvider>
+    
   );
 }
 
