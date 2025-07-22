@@ -1,8 +1,7 @@
 import axios from 'axios';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
+console.log("API BASE URL:", API_BASE_URL); // ✅ should print full URL
 
-
-const API_BASE_URL = import.meta.env.VITE_BACKEND_URL;
-console.log("API BASE URL:", API_BASE_URL); // Add this for debug
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
