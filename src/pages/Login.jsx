@@ -60,19 +60,71 @@ const Login = () => {
     setLoading(true);
 
     try {
+      // Add debug logging
+      console.log('Attempting login with:', { 
+        email: formData.email,
+        apiBaseUrl: import.meta.env.VITE_API_BASE_URL 
+      });
+
       const response = await adminAPI.login(formData);
-      const { token } = response.data;
       
+      // More robust token extraction
+      const token = response.data?.token || response.data?.accessToken || response.data?.authToken;
+      
+      if (!token) {
+        throw new Error('No authentication token received from server');
+      }
+      
+      // Store token and user info
       login(token, formData.email);
       toast.success('Login successful!');
       navigate('/dashboard');
+      
     } catch (error) {
-      const message = error.response?.data?.error || 'Login failed';
+      console.error('Full login error:', error);
+      
+      // More comprehensive error handling
+      let message = 'Login failed';
+      
+      if (error.response) {
+        // Server responded with error status
+        const errorData = error.response.data;
+        message = errorData?.error || errorData?.message || `Server error: ${error.response.status}`;
+        
+        console.error('Server error details:', {
+          status: error.response.status,
+          data: errorData,
+          headers: error.response.headers
+        });
+      } else if (error.request) {
+        // Request was made but no response
+        message = 'Cannot connect to server. Please check your internet connection.';
+        console.error('Network error - no response:', error.request);
+      } else if (error.message) {
+        // Something else happened
+        message = error.message;
+        console.error('Request setup error:', error.message);
+      }
+      
       toast.error(message);
-      console.error('Login error:', error);
+      
+      // If it's a network error, also show in UI
+      if (!error.response) {
+        setErrors({ general: message });
+      }
+      
     } finally {
       setLoading(false);
     }
+  };
+
+  // Quick fill demo credentials function
+  const fillDemoCredentials = () => {
+    setFormData({
+      email: 'admin@gmail.com',
+      password: 'admin123'
+    });
+    setErrors({});
   };
 
   return (
@@ -94,6 +146,13 @@ const Login = () => {
         {/* Login Form */}
         <div className="bg-white rounded-xl shadow-lg p-8">
           <form onSubmit={handleSubmit} className="space-y-6">
+            {/* General Error Display */}
+            {errors.general && (
+              <div className="p-3 rounded-lg bg-red-50 border border-red-200">
+                <p className="text-sm text-red-600">{errors.general}</p>
+              </div>
+            )}
+
             {/* Email Field */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-700 mb-2">
@@ -166,12 +225,28 @@ const Login = () => {
           {/* Demo Credentials */}
           <div className="mt-6 p-4 bg-gray-50 rounded-lg">
             <p className="text-sm text-gray-600 text-center mb-2">Demo Credentials:</p>
-            <div className="text-xs text-gray-500 space-y-1">
+            <div className="text-xs text-gray-500 space-y-1 text-center">
               <p><strong>Email:</strong> admin@gmail.com</p>
               <p><strong>Password:</strong> admin123</p>
             </div>
+            <button
+              type="button"
+              onClick={fillDemoCredentials}
+              className="mt-2 w-full text-xs text-blue-600 hover:text-blue-700 font-medium"
+            >
+              Click to fill demo credentials
+            </button>
           </div>
         </div>
+
+        {/* Debug Info (remove in production) */}
+        {import.meta.env.DEV && (
+          <div className="bg-gray-800 text-white p-3 rounded-lg text-xs">
+            <p><strong>Debug Info:</strong></p>
+            <p>API URL: {import.meta.env.VITE_API_BASE_URL || 'undefined'}</p>
+            <p>Environment: {import.meta.env.MODE}</p>
+          </div>
+        )}
       </div>
     </div>
   );

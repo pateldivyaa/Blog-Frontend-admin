@@ -1,15 +1,17 @@
 import axios from 'axios';
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL;
-console.log("API BASE URL:", API_BASE_URL); // ✅ should print full URL
 
+// Fix: Use consistent environment variable name and add fallback
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_BACKEND_URL || 'https://blog-backend-6jbl.onrender.com/api';
+
+console.log("API BASE URL:", API_BASE_URL); // ✅ should print full URL
 
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
     'Content-Type': 'application/json',
   },
+  timeout: 10000, // Add timeout to prevent hanging requests
 });
-
 
 // Add request interceptor to include auth token
 apiClient.interceptors.request.use(
@@ -21,6 +23,19 @@ apiClient.interceptors.request.use(
     return config;
   },
   (error) => {
+    return Promise.reject(error);
+  }
+);
+
+// Add response interceptor for better error handling
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    // Handle common errors
+    if (error.response?.status === 401) {
+      localStorage.removeItem('token');
+      window.location.href = '/admin/login';
+    }
     return Promise.reject(error);
   }
 );
@@ -49,19 +64,20 @@ export const authorAPI = {
   createAuthor: (data) => apiClient.post('/authors', data),
 };
 
-// Admin API endpoints
-// adminAPI.login({ email, password })
-//   .then((res) => {
-//     localStorage.setItem("token", res.data.token);
-//     navigate("/dashboard");
-//   })
-//   .catch((err) => {
-//     const message = err.response?.data?.message || "Login failed";
-//     console.log("Login error:", message);
-//     setError(message);  // useState for showing in UI
-//   });
+// Admin API endpoints with better error handling
 export const adminAPI = {
-  login: (credentials) => apiClient.post('/admin/login', credentials),
+  login: async (credentials) => {
+    try {
+      const response = await apiClient.post('/admin/login', credentials);
+      return response;
+    } catch (error) {
+      // Better error handling
+      const message = error.response?.data?.message || error.message || "Login failed";
+      console.error("Login error details:", error.response?.data || error.message);
+      throw new Error(message);
+    }
+  },
+  
   logout: () => apiClient.post('/admin/logout'),
 };
 
