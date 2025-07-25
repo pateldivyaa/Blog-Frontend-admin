@@ -1,7 +1,7 @@
 import axios from 'axios';
 
 // Fix: Use consistent environment variable name and add fallback
-const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_BACKEND_URL || 'https://blog-backend-6jbl.onrender.com/api';
+const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || import.meta.env.VITE_BACKEND_URL || 'https://blog-backend-6jbl.onrender.com';
 
 console.log("API BASE URL:", API_BASE_URL); // ✅ should print full URL
 
