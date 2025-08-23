@@ -40,6 +40,19 @@ const Dashboard = () => {
     });
   };
 
+  // Helper function to safely get API base URL
+  const getImageUrl = (imageName) => {
+    const baseUrl = import.meta.env.VITE_API_BASE_URL;
+    if (!baseUrl || !imageName) return null;
+    
+    try {
+      return `${baseUrl.replace('/api', '')}/uploads/${imageName}`;
+    } catch (error) {
+      console.warn('Error constructing image URL:', error);
+      return null;
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-100 flex items-center justify-center">
@@ -259,63 +272,74 @@ const Dashboard = () => {
               </div>
             ) : (
               <div className="grid gap-4">
-                {stats.recentBlogs.map((blog, index) => (
-                  <div key={blog._id} className="group flex items-center space-x-6 p-6 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 rounded-2xl transition-all duration-300 hover:shadow-lg">
-                    <div className="flex-shrink-0">
-                      {blog.image ? (
-                        <img
-                          src={`${import.meta.env.VITE_API_BASE_URL.replace('/api','')}/uploads/${blog.image}`}
-                          alt={blog.title}
-                          className="w-20 h-20 object-cover rounded-2xl shadow-md group-hover:shadow-xl transition-shadow duration-300"
-                        />
-                      ) : (
-                        <div className="w-20 h-20 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-md group-hover:shadow-xl transition-shadow duration-300">
+                {stats.recentBlogs.map((blog, index) => {
+                  const imageUrl = getImageUrl(blog.image);
+                  
+                  return (
+                    <div key={blog._id} className="group flex items-center space-x-6 p-6 hover:bg-gradient-to-r hover:from-blue-50 hover:to-purple-50 rounded-2xl transition-all duration-300 hover:shadow-lg">
+                      <div className="flex-shrink-0">
+                        {imageUrl ? (
+                          <img
+                            src={imageUrl}
+                            alt={blog.title}
+                            className="w-20 h-20 object-cover rounded-2xl shadow-md group-hover:shadow-xl transition-shadow duration-300"
+                            onError={(e) => {
+                              // Fallback to gradient placeholder if image fails to load
+                              e.target.style.display = 'none';
+                              e.target.nextSibling.style.display = 'flex';
+                            }}
+                          />
+                        ) : null}
+                        <div 
+                          className="w-20 h-20 bg-gradient-to-br from-blue-500 via-purple-500 to-pink-500 rounded-2xl flex items-center justify-center shadow-md group-hover:shadow-xl transition-shadow duration-300"
+                          style={{ display: imageUrl ? 'none' : 'flex' }}
+                        >
                           <BookOpen className="w-8 h-8 text-white" />
                         </div>
-                      )}
-                    </div>
-                    
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <h4 className="text-lg font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
-                            {blog.title}
-                          </h4>
-                          <p className="text-gray-600 text-sm mt-1" style={{ 
-                            display: '-webkit-box', 
-                            WebkitLineClamp: 2, 
-                            WebkitBoxOrient: 'vertical', 
-                            overflow: 'hidden' 
-                          }}>
-                            {blog.content.substring(0, 120)}...
-                          </p>
-                          <div className="flex items-center space-x-4 mt-3">
-                            <div className="flex items-center space-x-2">
-                              <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
-                                <span className="text-white text-xs font-bold">
-                                  {blog.author?.name?.[0] || 'A'}
+                      </div>
+                      
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-start justify-between">
+                          <div className="flex-1">
+                            <h4 className="text-lg font-bold text-gray-900 truncate group-hover:text-blue-600 transition-colors">
+                              {blog.title}
+                            </h4>
+                            <p className="text-gray-600 text-sm mt-1" style={{ 
+                              display: '-webkit-box', 
+                              WebkitLineClamp: 2, 
+                              WebkitBoxOrient: 'vertical', 
+                              overflow: 'hidden' 
+                            }}>
+                              {blog.content.substring(0, 120)}...
+                            </p>
+                            <div className="flex items-center space-x-4 mt-3">
+                              <div className="flex items-center space-x-2">
+                                <div className="w-6 h-6 bg-gradient-to-r from-blue-500 to-purple-600 rounded-full flex items-center justify-center">
+                                  <span className="text-white text-xs font-bold">
+                                    {blog.author?.name?.[0] || 'A'}
+                                  </span>
+                                </div>
+                                <span className="text-sm text-gray-500 font-medium">
+                                  {blog.author?.name || 'Anonymous'}
                                 </span>
                               </div>
-                              <span className="text-sm text-gray-500 font-medium">
-                                {blog.author?.name || 'Anonymous'}
-                              </span>
-                            </div>
-                            <div className="flex items-center space-x-1 text-gray-400">
-                              <Calendar className="w-4 h-4" />
-                              <span className="text-sm">{formatDate(blog.createdAt)}</span>
+                              <div className="flex items-center space-x-1 text-gray-400">
+                                <Calendar className="w-4 h-4" />
+                                <span className="text-sm">{formatDate(blog.createdAt)}</span>
+                              </div>
                             </div>
                           </div>
-                        </div>
-                        <div className="flex items-center space-x-2 ml-4">
-                          <div className="flex items-center space-x-1 px-3 py-1 bg-green-100 rounded-full">
-                            <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                            <span className="text-xs text-green-700 font-medium">Published</span>
+                          <div className="flex items-center space-x-2 ml-4">
+                            <div className="flex items-center space-x-1 px-3 py-1 bg-green-100 rounded-full">
+                              <div className="w-2 h-2 bg-green-500 rounded-full"></div>
+                              <span className="text-xs text-green-700 font-medium">Published</span>
+                            </div>
                           </div>
                         </div>
                       </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
