@@ -1,3 +1,4 @@
+// api.js - Updated with better cold start handling
 import axios from 'axios';
 
 // Fix: Use consistent environment variable name and add fallback
@@ -10,9 +11,51 @@ const apiClient = axios.create({
   headers: {
     'Content-Type': 'application/json',
   },
-  timeout: 30000, // Increased timeout for Render cold starts
-  withCredentials: true, // Enable credentials for CORS
+  timeout: 120000, // Increased to 2 minutes for cold starts
+  withCredentials: true,
 });
+
+// Health check function to wake up the server
+export const wakeUpServer = async () => {
+  try {
+    console.log('🔄 Waking up server...');
+    const response = await fetch(`${API_BASE_URL.replace('/api', '')}/health`, {
+      method: 'GET',
+      mode: 'cors',
+    });
+    console.log('✅ Server is awake!');
+    return response.ok;
+  } catch (error) {
+    console.log('⚠️ Server wake-up failed, but this is expected for cold starts');
+    return false;
+  }
+};
+
+// Retry function for cold start scenarios
+const retryRequest = async (requestFn, maxRetries = 2) => {
+  for (let i = 0; i <= maxRetries; i++) {
+    try {
+      if (i > 0) {
+        console.log(`🔄 Retry attempt ${i}/${maxRetries}`);
+        // Wait before retry
+        await new Promise(resolve => setTimeout(resolve, 5000 * i));
+      }
+      
+      return await requestFn();
+    } catch (error) {
+      const isTimeout = error.code === 'ECONNABORTED' || error.message.includes('timeout');
+      const isNetworkError = error.code === 'ERR_NETWORK';
+      
+      if ((isTimeout || isNetworkError) && i < maxRetries) {
+        console.log(`⏰ Request ${i + 1} failed (likely cold start), retrying...`);
+        // Try to wake up the server
+        await wakeUpServer();
+        continue;
+      }
+      throw error;
+    }
+  }
+};
 
 // Add request interceptor to include auth token
 apiClient.interceptors.request.use(
@@ -45,7 +88,8 @@ apiClient.interceptors.response.use(
       method: error.config?.method,
       status: error.response?.status,
       data: error.response?.data,
-      message: error.message
+      message: error.message,
+      code: error.code
     });
     
     // Handle common errors
@@ -54,67 +98,59 @@ apiClient.interceptors.response.use(
       window.location.href = '/admin/login';
     }
     
-    // Handle CORS errors specifically
-    if (error.message.includes('CORS') || error.code === 'ERR_NETWORK') {
-      console.error('CORS Error detected. Check backend CORS configuration.');
-    }
-    
     return Promise.reject(error);
   }
 );
 
-// Blog API endpoints
+// Blog API endpoints with retry logic
 export const blogAPI = {
   getBlogs: () => {
     console.log('Fetching blogs...');
-    return apiClient.get('/blogs');
+    return retryRequest(() => apiClient.get('/blogs'));
   },
   
   createBlog: (formData) => {
-    return apiClient.post('/blogs', formData, {
+    return retryRequest(() => apiClient.post('/blogs', formData, {
       headers: {
         'Content-Type': 'multipart/form-data',
       },
-    });
+      timeout: 180000, // 3 minutes for file uploads
+    }));
   },
   
-  updateBlog: (id, data) => apiClient.put(`/blogs/${id}`, data),
+  updateBlog: (id, data) => retryRequest(() => apiClient.put(`/blogs/${id}`, data)),
   
-  deleteBlog: (id) => apiClient.delete(`/blogs/${id}`),
+  deleteBlog: (id) => retryRequest(() => apiClient.delete(`/blogs/${id}`)),
 };
 
-// Author API endpoints
+// Author API endpoints with retry logic
 export const authorAPI = {
-  getAuthors: () => apiClient.get('/authors'),
+  getAuthors: () => retryRequest(() => apiClient.get('/authors')),
   
-  createAuthor: (data) => apiClient.post('/authors', data),
+  createAuthor: (data) => retryRequest(() => apiClient.post('/authors', data)),
 };
 
-// Admin API endpoints with better error handling
+// Admin API endpoints with retry logic
 export const adminAPI = {
   login: async (credentials) => {
     try {
       console.log('Attempting login...');
-      const response = await apiClient.post('/admin/login', credentials);
+      const response = await retryRequest(() => apiClient.post('/admin/login', credentials));
       console.log('Login successful');
       return response;
     } catch (error) {
-      // Better error handling
       const message = error.response?.data?.message || error.message || "Login failed";
       console.error("Login error details:", error.response?.data || error.message);
       throw new Error(message);
     }
   },
   
-  logout: () => apiClient.post('/admin/logout'),
+  logout: () => retryRequest(() => apiClient.post('/admin/logout')),
   
-  // Add a test endpoint to check backend connectivity
+  // Health check endpoint
   testConnection: () => {
     console.log('Testing backend connection...');
-    return apiClient.get('/health').catch(err => {
-      console.error('Backend connection test failed:', err.message);
-      throw err;
-    });
+    return retryRequest(() => apiClient.get('/health'));
   }
 };
 
