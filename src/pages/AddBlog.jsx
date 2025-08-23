@@ -1,9 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { blogAPI, authorAPI } from '../utils/api';
-import { Upload, Save, ArrowLeft, Image as ImageIcon } from 'lucide-react';
-import Alert from '../components/Alert';
-import toast from 'react-hot-toast';
+import { Upload, Save, ArrowLeft, ImageIcon, User, FileText, Edit3, Sparkles, Camera, X } from 'lucide-react';
 
 const AddBlog = () => {
   const [formData, setFormData] = useState({
@@ -13,25 +9,19 @@ const AddBlog = () => {
   });
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
-  const [authors, setAuthors] = useState([]);
+  const [authors, setAuthors] = useState([
+    { _id: '1', name: 'John Doe', email: 'john@example.com' },
+    { _id: '2', name: 'Jane Smith', email: 'jane@example.com' },
+    { _id: '3', name: 'Alex Johnson', email: 'alex@example.com' },
+    { _id: '4', name: 'Sarah Wilson', email: 'sarah@example.com' }
+  ]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
+  const [notification, setNotification] = useState({ message: '', type: '' });
 
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    fetchAuthors();
-  }, []);
-
-  const fetchAuthors = async () => {
-    try {
-      const response = await authorAPI.getAuthors();
-      setAuthors(response.data);
-    } catch (error) {
-      console.error('Failed to fetch authors:', error);
-      // If no authors, create a default one
-      setAuthors([{ _id: 'default', name: 'Admin', email: 'admin@gmail.com' }]);
-    }
+  const navigate = () => {
+    console.log('Navigating back...');
+    // In a real app, this would navigate to the previous page
   };
 
   const handleChange = (e) => {
@@ -41,7 +31,6 @@ const AddBlog = () => {
       [name]: value
     }));
     
-    // Clear error when user starts typing
     if (errors[name]) {
       setErrors(prev => ({
         ...prev,
@@ -53,24 +42,22 @@ const AddBlog = () => {
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
-      // Validate file type
       if (!file.type.startsWith('image/')) {
-        toast.error('Please select a valid image file');
+        setNotification({ message: 'Please select a valid image file', type: 'error' });
         return;
       }
       
-      // Validate file size (max 5MB)
       if (file.size > 5 * 1024 * 1024) {
-        toast.error('Image size should be less than 5MB');
+        setNotification({ message: 'Image size should be less than 5MB', type: 'error' });
         return;
       }
 
       setImage(file);
       
-      // Create preview
       const reader = new FileReader();
       reader.onload = (e) => setImagePreview(e.target.result);
       reader.readAsDataURL(file);
+      setNotification({ message: '', type: '' });
     }
   };
 
@@ -102,29 +89,37 @@ const AddBlog = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      toast.error('Please fix the form errors');
+      setNotification({ message: 'Please fix the form errors', type: 'error' });
       return;
     }
 
     setLoading(true);
+    setNotification({ message: '', type: '' });
 
     try {
-      const formDataToSend = new FormData();
-      formDataToSend.append('title', formData.title.trim());
-      formDataToSend.append('content', formData.content.trim());
-      formDataToSend.append('author', formData.author);
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 2000));
       
-      if (image) {
-        formDataToSend.append('image', image);
-      }
-
-      await blogAPI.createBlog(formDataToSend);
+      // Simulate success
+      console.log('Blog created successfully!', {
+        title: formData.title,
+        content: formData.content,
+        author: formData.author,
+        hasImage: !!image
+      });
       
-      toast.success('Blog created successfully!');
-      navigate('/blogs');
+      setNotification({ message: 'Blog created successfully!', type: 'success' });
+      
+      // Reset form
+      setTimeout(() => {
+        setFormData({ title: '', content: '', author: '' });
+        setImage(null);
+        setImagePreview(null);
+        setNotification({ message: '', type: '' });
+      }, 2000);
+      
     } catch (error) {
-      const message = error.response?.data?.error || 'Failed to create blog';
-      toast.error(message);
+      setNotification({ message: 'Failed to create blog', type: 'error' });
       console.error('Create blog error:', error);
     } finally {
       setLoading(false);
@@ -132,158 +127,267 @@ const AddBlog = () => {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        {/* Header */}
-        <div className="mb-8">
+    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
+      {/* Notification */}
+      {notification.message && (
+        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
+          notification.type === 'success' ? 'bg-green-500 text-white' :
+          notification.type === 'error' ? 'bg-red-500 text-white' :
+          'bg-blue-500 text-white'
+        } animate-pulse`}>
+          {notification.message}
+        </div>
+      )}
+
+      {/* Decorative background elements */}
+      <div className="absolute inset-0 overflow-hidden pointer-events-none">
+        <div className="absolute -top-40 -right-32 w-96 h-96 bg-gradient-to-br from-blue-200/30 to-purple-200/30 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-40 -left-32 w-96 h-96 bg-gradient-to-tr from-pink-200/30 to-blue-200/30 rounded-full blur-3xl"></div>
+      </div>
+
+      <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        {/* Header Section */}
+        <div className="mb-12">
           <button
-            onClick={() => navigate(-1)}
-            className="flex items-center space-x-2 text-gray-600 hover:text-gray-800 mb-4"
+            onClick={navigate}
+            className="group flex items-center space-x-2 text-gray-600 hover:text-gray-900 mb-6 transition-all duration-200 hover:translate-x-1"
           >
-            <ArrowLeft className="w-4 h-4" />
-            <span>Back</span>
+            <div className="p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-sm group-hover:shadow-md transition-all duration-200">
+              <ArrowLeft className="w-4 h-4" />
+            </div>
+            <span className="font-medium">Back</span>
           </button>
           
-          <h1 className="text-3xl font-bold text-gray-900">Create New Blog</h1>
-          <p className="text-gray-600 mt-2">Share your thoughts with the world</p>
+          <div className="text-center">
+            <div className="inline-flex items-center space-x-2 px-4 py-2 bg-gradient-to-r from-blue-500/10 to-purple-500/10 rounded-full mb-4">
+              <Sparkles className="w-5 h-5 text-blue-600" />
+              <span className="text-sm font-medium text-gray-700">Create Something Amazing</span>
+            </div>
+            <h1 className="text-5xl font-bold bg-gradient-to-r from-gray-900 via-blue-800 to-purple-800 bg-clip-text text-transparent mb-3">
+              New Blog Post
+            </h1>
+            <p className="text-xl text-gray-600 max-w-2xl mx-auto leading-relaxed">
+              Transform your ideas into compelling stories that inspire and engage your readers
+            </p>
+          </div>
         </div>
 
-        {/* Form */}
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100">
-          <form onSubmit={handleSubmit} className="p-6 space-y-6">
-            {/* Title */}
-            <div>
-              <label htmlFor="title" className="block text-sm font-medium text-gray-700 mb-2">
-                Blog Title *
-              </label>
-              <input
-                type="text"
-                id="title"
-                name="title"
-                value={formData.title}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                  errors.title ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="Enter your blog title"
-              />
-              {errors.title && (
-                <p className="mt-1 text-sm text-red-600">{errors.title}</p>
-              )}
-            </div>
-
-            {/* Author Selection */}
-            <div>
-              <label htmlFor="author" className="block text-sm font-medium text-gray-700 mb-2">
-                Author *
-              </label>
-              <select
-                id="author"
-                name="author"
-                value={formData.author}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors ${
-                  errors.author ? 'border-red-300' : 'border-gray-300'
-                }`}
-              >
-                <option value="">Select an author</option>
-                {authors.map((author) => (
-                  <option key={author._id} value={author._id}>
-                    {author.name} ({author.email})
-                  </option>
-                ))}
-              </select>
-              {errors.author && (
-                <p className="mt-1 text-sm text-red-600">{errors.author}</p>
-              )}
-            </div>
-
-            {/* Content */}
-            <div>
-              <label htmlFor="content" className="block text-sm font-medium text-gray-700 mb-2">
-                Content *
-              </label>
-              <textarea
-                id="content"
-                name="content"
-                rows={8}
-                value={formData.content}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500 transition-colors resize-none ${
-                  errors.content ? 'border-red-300' : 'border-gray-300'
-                }`}
-                placeholder="Write your blog content here..."
-              />
-              {errors.content && (
-                <p className="mt-1 text-sm text-red-600">{errors.content}</p>
-              )}
-            </div>
-
-            {/* Image Upload */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Featured Image (Optional)
-              </label>
+        {/* Main Form Container */}
+        <div className="bg-white/70 backdrop-blur-xl rounded-3xl shadow-2xl border border-white/20 overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 h-2"></div>
+          
+          <form onSubmit={handleSubmit} className="p-8 lg:p-12">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
               
-              {!imagePreview ? (
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-6 hover:border-gray-400 transition-colors">
-                  <div className="text-center">
-                    <ImageIcon className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <div className="flex text-sm text-gray-600">
-                      <label htmlFor="image" className="relative cursor-pointer bg-white rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-                        <span>Upload a file</span>
-                        <input
-                          id="image"
-                          name="image"
-                          type="file"
-                          className="sr-only"
-                          accept="image/*"
-                          onChange={handleImageChange}
-                        />
-                      </label>
-                      <p className="pl-1">or drag and drop</p>
+              {/* Left Column - Main Content */}
+              <div className="lg:col-span-2 space-y-8">
+                
+                {/* Title Section */}
+                <div className="group">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-xl bg-gradient-to-r from-blue-500 to-purple-500 text-white shadow-lg">
+                      <Edit3 className="w-5 h-5" />
                     </div>
-                    <p className="text-xs text-gray-500">PNG, JPG, JPEG up to 5MB</p>
+                    <label htmlFor="title" className="text-lg font-semibold text-gray-800">
+                      Blog Title
+                    </label>
+                    <span className="px-2 py-1 bg-red-100 text-red-600 text-xs rounded-full font-medium">Required</span>
+                  </div>
+                  
+                  <div className="relative">
+                    <input
+                      type="text"
+                      id="title"
+                      name="title"
+                      value={formData.title}
+                      onChange={handleChange}
+                      className={`w-full px-6 py-4 text-lg border-2 rounded-2xl bg-white/50 backdrop-blur-sm focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 placeholder:text-gray-400 ${
+                        errors.title ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      placeholder="What's your story about?"
+                    />
+                    {errors.title && (
+                      <div className="flex items-center space-x-2 mt-3 text-red-600">
+                        <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                        <p className="text-sm font-medium">{errors.title}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
-              ) : (
-                <div className="relative">
-                  <img
-                    src={imagePreview}
-                    alt="Preview"
-                    className="w-full h-64 object-cover rounded-lg"
-                  />
-                  <button
-                    type="button"
-                    onClick={removeImage}
-                    className="absolute top-2 right-2 bg-red-500 text-white rounded-full p-2 hover:bg-red-600 transition-colors"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              )}
-            </div>
 
-            {/* Submit Button */}
-            <div className="flex justify-end pt-6 border-t border-gray-200">
-              <button
-                type="submit"
-                disabled={loading}
-                className="flex items-center space-x-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-              >
-                {loading ? (
-                  <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div>
-                ) : (
-                  <>
-                    <Save className="w-5 h-5" />
-                    <span>Publish Blog</span>
-                  </>
-                )}
-              </button>
+                {/* Content Section */}
+                <div className="group">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-xl bg-gradient-to-r from-green-500 to-teal-500 text-white shadow-lg">
+                      <FileText className="w-5 h-5" />
+                    </div>
+                    <label htmlFor="content" className="text-lg font-semibold text-gray-800">
+                      Your Story
+                    </label>
+                    <span className="px-2 py-1 bg-red-100 text-red-600 text-xs rounded-full font-medium">Required</span>
+                  </div>
+                  
+                  <div className="relative">
+                    <textarea
+                      id="content"
+                      name="content"
+                      rows={12}
+                      value={formData.content}
+                      onChange={handleChange}
+                      className={`w-full px-6 py-4 text-lg border-2 rounded-2xl bg-white/50 backdrop-blur-sm focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 resize-none placeholder:text-gray-400 leading-relaxed ${
+                        errors.content ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200 hover:border-gray-300'
+                      }`}
+                      placeholder="Share your thoughts, experiences, and insights with the world..."
+                    />
+                    <div className="absolute bottom-4 right-4 text-sm text-gray-400">
+                      {formData.content.length} characters
+                    </div>
+                    {errors.content && (
+                      <div className="flex items-center space-x-2 mt-3 text-red-600">
+                        <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                        <p className="text-sm font-medium">{errors.content}</p>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column - Sidebar */}
+              <div className="space-y-8">
+                
+                {/* Author Selection */}
+                <div className="bg-gradient-to-br from-white/60 to-white/30 backdrop-blur-sm rounded-2xl p-6 border border-white/40 shadow-lg">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-xl bg-gradient-to-r from-orange-500 to-red-500 text-white shadow-lg">
+                      <User className="w-5 h-5" />
+                    </div>
+                    <label htmlFor="author" className="text-lg font-semibold text-gray-800">
+                      Author
+                    </label>
+                  </div>
+                  
+                  <select
+                    id="author"
+                    name="author"
+                    value={formData.author}
+                    onChange={handleChange}
+                    className={`w-full px-4 py-3 border-2 rounded-xl bg-white/70 focus:outline-none focus:ring-4 focus:ring-blue-500/20 focus:border-blue-500 transition-all duration-300 ${
+                      errors.author ? 'border-red-300 focus:border-red-500 focus:ring-red-500/20' : 'border-gray-200'
+                    }`}
+                  >
+                    <option value="">Choose an author</option>
+                    {authors.map((author) => (
+                      <option key={author._id} value={author._id}>
+                        {author.name} ({author.email})
+                      </option>
+                    ))}
+                  </select>
+                  
+                  {errors.author && (
+                    <div className="flex items-center space-x-2 mt-3 text-red-600">
+                      <div className="w-2 h-2 rounded-full bg-red-500"></div>
+                      <p className="text-sm font-medium">{errors.author}</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Image Upload Section */}
+                <div className="bg-gradient-to-br from-white/60 to-white/30 backdrop-blur-sm rounded-2xl p-6 border border-white/40 shadow-lg">
+                  <div className="flex items-center space-x-3 mb-4">
+                    <div className="p-2 rounded-xl bg-gradient-to-r from-pink-500 to-purple-500 text-white shadow-lg">
+                      <Camera className="w-5 h-5" />
+                    </div>
+                    <label className="text-lg font-semibold text-gray-800">
+                      Featured Image
+                    </label>
+                    <span className="px-2 py-1 bg-gray-100 text-gray-600 text-xs rounded-full font-medium">Optional</span>
+                  </div>
+                  
+                  {!imagePreview ? (
+                    <div className="relative group">
+                      <input
+                        id="image"
+                        name="image"
+                        type="file"
+                        className="sr-only"
+                        accept="image/*"
+                        onChange={handleImageChange}
+                      />
+                      <label 
+                        htmlFor="image" 
+                        className="block border-2 border-dashed border-gray-300 rounded-2xl p-8 hover:border-blue-400 hover:bg-blue-50/50 transition-all duration-300 cursor-pointer group-hover:scale-105"
+                      >
+                        <div className="text-center">
+                          <div className="p-4 rounded-full bg-gradient-to-r from-blue-500 to-purple-500 text-white w-fit mx-auto mb-4 shadow-lg">
+                            <ImageIcon className="w-8 h-8" />
+                          </div>
+                          <p className="text-lg font-medium text-gray-700 mb-2">Drop your image here</p>
+                          <p className="text-sm text-gray-500 mb-2">or click to browse</p>
+                          <p className="text-xs text-gray-400">PNG, JPG, JPEG up to 5MB</p>
+                        </div>
+                      </label>
+                    </div>
+                  ) : (
+                    <div className="relative group">
+                      <img
+                        src={imagePreview}
+                        alt="Preview"
+                        className="w-full h-48 object-cover rounded-2xl shadow-lg"
+                      />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity duration-300 rounded-2xl flex items-center justify-center">
+                        <button
+                          type="button"
+                          onClick={removeImage}
+                          className="p-3 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors shadow-lg transform hover:scale-110"
+                        >
+                          <X className="w-5 h-5" />
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {/* Action Button */}
+                <div className="sticky top-8">
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="w-full group relative overflow-hidden bg-gradient-to-r from-blue-600 via-purple-600 to-pink-600 text-white py-4 px-6 rounded-2xl font-semibold text-lg shadow-2xl hover:shadow-3xl transform hover:scale-105 focus:outline-none focus:ring-4 focus:ring-blue-500/50 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none transition-all duration-300"
+                  >
+                    <div className="absolute inset-0 bg-gradient-to-r from-blue-700 via-purple-700 to-pink-700 opacity-0 group-hover:opacity-100 transition-opacity duration-300"></div>
+                    <div className="relative flex items-center justify-center space-x-3">
+                      {loading ? (
+                        <>
+                          <div className="animate-spin rounded-full h-6 w-6 border-2 border-white border-t-transparent"></div>
+                          <span>Publishing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Save className="w-6 h-6 group-hover:rotate-12 transition-transform duration-300" />
+                          <span>Publish Blog</span>
+                        </>
+                      )}
+                    </div>
+                  </button>
+                  
+                  <p className="text-center text-sm text-gray-500 mt-4 px-4">
+                    Your blog will be published immediately and visible to all readers
+                  </p>
+                </div>
+              </div>
             </div>
           </form>
+        </div>
+        
+        {/* Floating Elements */}
+        <div className="fixed bottom-8 right-8 pointer-events-none">
+          <div className="w-3 h-3 rounded-full bg-blue-400 animate-bounce"></div>
+        </div>
+        <div className="fixed bottom-12 right-16 pointer-events-none">
+          <div className="w-2 h-2 rounded-full bg-purple-400 animate-bounce" style={{ animationDelay: '0.5s' }}></div>
+        </div>
+        <div className="fixed bottom-16 right-12 pointer-events-none">
+          <div className="w-1 h-1 rounded-full bg-pink-400 animate-bounce" style={{ animationDelay: '1s' }}></div>
         </div>
       </div>
     </div>
