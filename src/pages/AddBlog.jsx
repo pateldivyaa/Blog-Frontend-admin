@@ -1,5 +1,9 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { blogAPI, authorAPI } from '../utils/api';
 import { Upload, Save, ArrowLeft, ImageIcon, User, FileText, Edit3, Sparkles, Camera, X } from 'lucide-react';
+import Alert from '../components/Alert';
+import toast from 'react-hot-toast';
 
 const AddBlog = () => {
   const [formData, setFormData] = useState({
@@ -9,19 +13,24 @@ const AddBlog = () => {
   });
   const [image, setImage] = useState(null);
   const [imagePreview, setImagePreview] = useState(null);
-  const [authors, setAuthors] = useState([
-    { _id: '1', name: 'John Doe', email: 'john@example.com' },
-    { _id: '2', name: 'Jane Smith', email: 'jane@example.com' },
-    { _id: '3', name: 'Alex Johnson', email: 'alex@example.com' },
-    { _id: '4', name: 'Sarah Wilson', email: 'sarah@example.com' }
-  ]);
+  const [authors, setAuthors] = useState([]);
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
-  const [notification, setNotification] = useState({ message: '', type: '' });
 
-  const navigate = () => {
-    console.log('Navigating back...');
-    // In a real app, this would navigate to the previous page
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    fetchAuthors();
+  }, []);
+
+  const fetchAuthors = async () => {
+    try {
+      const response = await authorAPI.getAuthors();
+      setAuthors(response.data);
+    } catch (error) {
+      console.error('Failed to fetch authors:', error);
+      setAuthors([{ _id: 'default', name: 'Admin', email: 'admin@gmail.com' }]);
+    }
   };
 
   const handleChange = (e) => {
@@ -43,12 +52,12 @@ const AddBlog = () => {
     const file = e.target.files[0];
     if (file) {
       if (!file.type.startsWith('image/')) {
-        setNotification({ message: 'Please select a valid image file', type: 'error' });
+        toast.error('Please select a valid image file');
         return;
       }
       
       if (file.size > 5 * 1024 * 1024) {
-        setNotification({ message: 'Image size should be less than 5MB', type: 'error' });
+        toast.error('Image size should be less than 5MB');
         return;
       }
 
@@ -57,7 +66,6 @@ const AddBlog = () => {
       const reader = new FileReader();
       reader.onload = (e) => setImagePreview(e.target.result);
       reader.readAsDataURL(file);
-      setNotification({ message: '', type: '' });
     }
   };
 
@@ -89,37 +97,29 @@ const AddBlog = () => {
     e.preventDefault();
 
     if (!validateForm()) {
-      setNotification({ message: 'Please fix the form errors', type: 'error' });
+      toast.error('Please fix the form errors');
       return;
     }
 
     setLoading(true);
-    setNotification({ message: '', type: '' });
 
     try {
-      // Simulate API call
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      const formDataToSend = new FormData();
+      formDataToSend.append('title', formData.title.trim());
+      formDataToSend.append('content', formData.content.trim());
+      formDataToSend.append('author', formData.author);
       
-      // Simulate success
-      console.log('Blog created successfully!', {
-        title: formData.title,
-        content: formData.content,
-        author: formData.author,
-        hasImage: !!image
-      });
+      if (image) {
+        formDataToSend.append('image', image);
+      }
+
+      await blogAPI.createBlog(formDataToSend);
       
-      setNotification({ message: 'Blog created successfully!', type: 'success' });
-      
-      // Reset form
-      setTimeout(() => {
-        setFormData({ title: '', content: '', author: '' });
-        setImage(null);
-        setImagePreview(null);
-        setNotification({ message: '', type: '' });
-      }, 2000);
-      
+      toast.success('Blog created successfully!');
+      navigate('/blogs');
     } catch (error) {
-      setNotification({ message: 'Failed to create blog', type: 'error' });
+      const message = error.response?.data?.error || 'Failed to create blog';
+      toast.error(message);
       console.error('Create blog error:', error);
     } finally {
       setLoading(false);
@@ -128,17 +128,6 @@ const AddBlog = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-blue-50 to-indigo-50">
-      {/* Notification */}
-      {notification.message && (
-        <div className={`fixed top-4 right-4 z-50 px-6 py-3 rounded-lg shadow-lg ${
-          notification.type === 'success' ? 'bg-green-500 text-white' :
-          notification.type === 'error' ? 'bg-red-500 text-white' :
-          'bg-blue-500 text-white'
-        } animate-pulse`}>
-          {notification.message}
-        </div>
-      )}
-
       {/* Decorative background elements */}
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="absolute -top-40 -right-32 w-96 h-96 bg-gradient-to-br from-blue-200/30 to-purple-200/30 rounded-full blur-3xl"></div>
@@ -149,7 +138,7 @@ const AddBlog = () => {
         {/* Header Section */}
         <div className="mb-12">
           <button
-            onClick={navigate}
+            onClick={() => navigate(-1)}
             className="group flex items-center space-x-2 text-gray-600 hover:text-gray-900 mb-6 transition-all duration-200 hover:translate-x-1"
           >
             <div className="p-2 rounded-full bg-white/80 backdrop-blur-sm shadow-sm group-hover:shadow-md transition-all duration-200">
